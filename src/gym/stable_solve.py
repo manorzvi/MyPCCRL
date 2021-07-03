@@ -44,9 +44,9 @@ class MyMlpPolicy(FeedForwardPolicy):
         global training_sess
         training_sess = sess
 
-# env = gym.make('PccNs-v0')
+env = gym.make('PccNs-v0')
 # env = gym.make('PccNs-v1')
-env = gym.make('PccNs-v2')
+# env = gym.make('PccNs-v2')
 
 gamma = arg_or_default("--gamma", default=0.99)
 print("gamma = %f" % gamma)
