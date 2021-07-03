@@ -501,7 +501,7 @@ class SimulatedNetworkEnv(gym.Env):
             self.dump_events_to_file("pcc_env_log_run_%d.json" % self.episodes_run)
         self.event_record = {"Events":[]}
         self.net.run_for_dur(self.run_dur)
-        self.net.run_for_dur(self.run_dur)
+        # self.net.run_for_dur(self.run_dur)
         self.reward_ewma *= 0.99
         self.reward_ewma += 0.01 * self.reward_sum
         print("Reward: %0.2f, Ewma Reward: %0.2f" % (self.reward_sum, self.reward_ewma))
