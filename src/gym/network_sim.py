@@ -441,6 +441,7 @@ class SimulatedNetworkEnv(gym.Env):
         for sender in self.senders:
             sender.record_run()
         self.steps_taken += 1
+
         sender_obs = self._get_all_sender_obs()
         sender_mi = self.senders[0].get_run_data()
         event = {}
@@ -458,8 +459,8 @@ class SimulatedNetworkEnv(gym.Env):
         #event["Cwnd"] = sender_mi.cwnd
         #event["Cwnd Used"] = sender_mi.cwnd_used
         self.event_record["Events"].append(event)
-        if event["Latency"] > 0.0:
-            self.run_dur = 0.5 * sender_mi.get("avg latency")
+        # if event["Latency"] > 0.0:
+        #     self.run_dur = 0.5 * sender_mi.get("avg latency")
         #print("Sender obs: %s" % sender_obs)
 
         should_stop = False
