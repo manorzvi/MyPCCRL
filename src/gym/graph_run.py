@@ -35,6 +35,7 @@ with open(stdout_and_stderr_filename, 'r') as f:
         last_lines.append(line)
         if re.search(filename, line):
             link_params_str = last_lines[0]
+            break
 
 bw      = float(re.search(r'bw=(\d+\.\d+)', link_params_str).group(1))
 lat     = float(re.search(r'lat=(\d+\.\d+)', link_params_str).group(1))

@@ -249,12 +249,7 @@ class Sender:
         return self.history.as_array()
 
     def get_run_data(self):
-        obs_end_time = self.net.cur_time()
-        
-        #obs_dur = obs_end_time - self.obs_start_time
-        #print("Got %d acks in %f seconds" % (self.acked, obs_dur))
-        #print("Sent %d packets in %f seconds" % (self.sent, obs_dur))
-        #print("self.rate = %f" % self.rate)
+        obs_end_time = self.net.cur_time
 
         return sender_obs.SenderMonitorInterval(
             self.id,
@@ -291,8 +286,10 @@ class Sender:
         self.bytes_in_flight = 0
         self.min_latency = None
         self.reset_obs()
-        self.history = sender_obs.SenderHistory(self.history_len,
-                                                self.features, self.id)
+        self.history = sender_obs.SenderHistory(self.history_len, self.features, self.id)
+
+    def __gt__(self, sender2):
+        return False
 
 
 class SimulatedNetworkEnv(gym.Env, ABC):
@@ -341,8 +338,8 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         single_obs_min_vec = sender_obs.get_min_obs_vector(self.features)
         single_obs_max_vec = sender_obs.get_max_obs_vector(self.features)
         self.observation_space = spaces.Box(
-            np.tile(single_obs_min_vec, self.history_len),
-            np.tile(single_obs_max_vec, self.history_len),
+            np.tile(single_obs_min_vec, self.history_len * 2),  # 2 for two senders
+            np.tile(single_obs_max_vec, self.history_len * 2),  # 2 for two senders
             dtype=np.float32
         )
 
@@ -354,40 +351,44 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         sender_obs = np.stack(sender_obs)
         sender_obs = np.array(sender_obs).reshape(-1,)
 
-        print(sender_obs)
-
         return sender_obs
 
     def step(self, action):
 
         for i in range(0, 2):
-            self.senders[i].apply_rate_delta(action[0])
+            self.senders[i].apply_rate_delta(action[i])
 
         reward = self.net.run_for_dur(self.run_dur)
         for sender in self.senders:
             sender.record_run()
         self.steps_taken += 1
-        sender_obs = self._get_all_sender_obs()
-        sender_mi = self.senders[0].get_run_data()
+
         event = {}
         event["Name"] = "Step"
         event["Time"] = self.steps_taken
         event["Reward"] = reward
-        event["Send Rate"] = sender_mi.get("send rate")
-        event["Throughput"] = sender_mi.get("recv rate")
-        event["Latency"] = sender_mi.get("avg latency")
-        event["Loss Rate"] = sender_mi.get("loss ratio")
-        event["Latency Inflation"] = sender_mi.get("sent latency inflation")
-        event["Latency Ratio"] = sender_mi.get("latency ratio")
-        event["Send Ratio"] = sender_mi.get("send ratio")
-        self.event_record["Events"].append(event)
-        if event["Latency"] > 0.0:
-            self.run_dur = 0.5 * sender_mi.get("avg latency")
 
-        should_stop = False
+        for i, sender in enumerate(self.senders):
+            sender_mi = sender.get_run_data()
+
+            event[f"Send Rate {i}"]          = sender_mi.get("send rate")
+            event[f"Throughput {i}"]         = sender_mi.get("recv rate")
+            event[f"Latency {i}"]            = sender_mi.get("avg latency")
+            event[f"Loss Rate {i}"]          = sender_mi.get("loss ratio")
+            event[f"Latency Inflation {i}"]  = sender_mi.get("sent latency inflation")
+            event[f"Latency Ratio {i}"]      = sender_mi.get("latency ratio")
+            event[f"Send Ratio {i}"]         = sender_mi.get("send ratio")
+
+            if event[f"Latency {i}"] > 0.0:
+                self.run_dur = 0.5 * sender_mi.get("avg latency")  # TODO: need to check what is this condition (manorz, 03/07/21)
+
+        self.event_record["Events"].append(event)
 
         self.reward_sum += reward
-        return sender_obs, reward, (self.steps_taken >= MAX_STEPS or should_stop), {}
+
+        sender_obs = self._get_all_sender_obs()
+
+        return sender_obs, reward, self.steps_taken >= MAX_STEPS, {}
 
     def print_debug(self):
         print("---Link Debug---")
@@ -421,7 +422,7 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         self.net = Network(self.senders, self.links)
 
         self.steps_taken    = 0
-        self.episodes_run   = 0
+        self.episodes_run   += 1
 
         if self.episodes_run > 0 and self.episodes_run % 100 == 0:
             self.dump_events_to_file("pcc_env_log_run_%d.json" % self.episodes_run)
@@ -429,7 +430,7 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         self.event_record = {"Events": []}
 
         self.net.run_for_dur(self.run_dur)
-        self.net.run_for_dur(self.run_dur)
+        # self.net.run_for_dur(self.run_dur)
 
         self.reward_ewma *= 0.99
         self.reward_ewma += 0.01 * self.reward_sum
