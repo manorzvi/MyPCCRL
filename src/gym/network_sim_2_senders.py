@@ -336,7 +336,6 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         self.reward_sum = 0.0
         self.reward_ewma = 0.0
         self.episodes_run = -1
-        self.steps_taken  = -1
         self.done = True
 
         self.history_len = history_len
@@ -434,7 +433,7 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         self.create_new_links_and_senders()
         self.net = Network(self.senders, self.links, throughput_coef=self.throughput_coef, latency_coef=self.latency_coef, loss_coef=self.loss_coef)
 
-        self.steps_taken  += 1
+        self.steps_taken   = 0
         self.episodes_run += 1
 
         if self.episodes_run > 0 and self.episodes_run % 100 == 0:
@@ -460,8 +459,7 @@ class SimulatedNetworkEnv(gym.Env, ABC):
 # Default mode (legacy)
 register(id='PccNs-v10', entry_point='network_sim_2_senders:SimulatedNetworkEnv')
 # Zero random loss set-up
-register(id='PccNs-v11', entry_point='network_sim_2_senders:SimulatedNetworkEnv',
-         kwargs={'loss': 0.0})
+register(id='PccNs-v11', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0})
 # Zero congestive loss set-up (very large queue)
 register(id='PccNs-v12', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'queue': 8})
 # Starting sending rate always equal to half the link bw
