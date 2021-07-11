@@ -509,8 +509,8 @@ class SimulatedNetworkEnv(gym.Env):
 
     def reset(self):
 
-        if not self.done:
-            raise ValueError('Agent called reset before the environment has done')
+        # if not self.done:
+        #     raise ValueError('Agent called reset before the environment has done')  # TODO: Due to the agent existing a training iteration without finishing the episode
         self.done = False
 
         self.steps_taken = 0
