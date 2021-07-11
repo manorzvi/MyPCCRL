@@ -365,7 +365,7 @@ class SimulatedNetworkEnv(gym.Env):
             loss=None, min_loss=0.0, max_loss=0.05,
             min_send_rate_factor=0.3, max_send_rate_factor=1.5,
             throughput_coef=10.0, latency_coef=-1e3, loss_coef=-2e3,
-            run_dur=None,
+            run_dur=None, episode_len=MAX_STEPS,
             history_len=arg_or_default(
                 "--history-len", default=10
             ),
@@ -402,6 +402,7 @@ class SimulatedNetworkEnv(gym.Env):
         self.loss_coef              = loss_coef
 
         self.run_dur                = run_dur
+        self.episode_len            = episode_len
 
         self.history_len = history_len
         print("History length: %d" % history_len)
@@ -414,7 +415,6 @@ class SimulatedNetworkEnv(gym.Env):
         self.net = Network(self.senders, self.links, throughput_coef=self.throughput_coef, latency_coef=self.latency_coef, loss_coef=self.loss_coef)
         self.run_period = 0.1
         self.steps_taken = 0
-        self.max_steps = MAX_STEPS
         self.debug_thpt_changes = False
         self.last_thpt = None
         self.last_rate = None
@@ -434,6 +434,7 @@ class SimulatedNetworkEnv(gym.Env):
 
         self.reward_sum = 0.0
         self.reward_ewma = 0.0
+        self.done = True
 
         self.event_record = {"Events":[]}
         self.episodes_run = -1
@@ -481,10 +482,10 @@ class SimulatedNetworkEnv(gym.Env):
         self.event_record["Events"].append(event)
         #print("Sender obs: %s" % sender_obs)
 
-        should_stop = False
+        self.done = self.steps_taken >= self.episode_len
 
         self.reward_sum += reward
-        return sender_obs, reward, (self.steps_taken >= self.max_steps or should_stop), {}
+        return sender_obs, reward, self.done, {}
 
     def print_debug(self):
         print("---Link Debug---")
@@ -507,6 +508,11 @@ class SimulatedNetworkEnv(gym.Env):
             self.run_dur = 3 * lat
 
     def reset(self):
+
+        if not self.done:
+            raise ValueError('Agent called reset before the environment has done')
+        self.done = False
+
         self.steps_taken = 0
         self.net.reset()
         self.create_new_links_and_senders()
@@ -561,3 +567,8 @@ register(id='PccNs-v6', entry_point='network_sim:SimulatedNetworkEnv', kwargs={'
                                                                                'min_send_rate_factor': 0.5,
                                                                                'max_send_rate_factor': 0.5,
                                                                                'run_dur': 3.0})
+# Same as PccNs-v3, but with long episodes (800 MIs)
+register(id='PccNs-v7', entry_point='network_sim:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                               'min_send_rate_factor': 0.5,
+                                                                               'max_send_rate_factor': 0.5,
+                                                                               'episode_len': 800})

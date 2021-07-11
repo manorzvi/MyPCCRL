@@ -297,7 +297,7 @@ class SimulatedNetworkEnv(gym.Env, ABC):
             loss=None, min_loss=0.0, max_loss=0.05,
             min_send_rate_factor=0.3, max_send_rate_factor=1.5,
             throughput_coef=10.0, latency_coef= -1e3, loss_coef= -2e3,
-            run_dur=None,
+            mi_len=None, episode_len=MAX_STEPS,
             history_len=arg_or_default(
                 "--history-len", default=10
             ),
@@ -330,11 +330,14 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         self.latency_coef           = latency_coef
         self.loss_coef              = loss_coef
 
-        self.run_dur                = run_dur
+        self.mi_len                 = mi_len
+        self.episode_len            = episode_len
 
         self.reward_sum = 0.0
         self.reward_ewma = 0.0
         self.episodes_run = -1
+        self.steps_taken  = -1
+        self.done = True
 
         self.history_len = history_len
         self.features = features.split(",")
@@ -364,15 +367,12 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         for i in range(0, 2):
             self.senders[i].apply_rate_delta(action[i])
 
-        reward = self.net.run_for_dur(self.run_dur)
+        reward = self.net.run_for_dur(self.mi_len)
         for sender in self.senders:
             sender.record_run()
         self.steps_taken += 1
 
-        event = {}
-        event["Name"] = "Step"
-        event["Time"] = self.steps_taken
-        event["Reward"] = reward
+        event = {"Name": "Step", "Time": self.steps_taken, "Reward": reward}
 
         for i, sender in enumerate(self.senders):
             sender_mi = sender.get_run_data()
@@ -391,7 +391,9 @@ class SimulatedNetworkEnv(gym.Env, ABC):
 
         sender_obs = self._get_all_sender_obs()
 
-        return sender_obs, reward, self.steps_taken >= MAX_STEPS, {}
+        self.done = self.steps_taken >= self.episode_len
+
+        return sender_obs, reward, self.done, {}
 
     def print_debug(self):
         print("---Link Debug---")
@@ -420,14 +422,19 @@ class SimulatedNetworkEnv(gym.Env, ABC):
                    [self.links[0], self.links[1]], 0, self.features, history_len=self.history_len)
         ]
 
-        if self.run_dur is None:
-            self.run_dur = 3 * lat
+        if self.mi_len is None:
+            self.mi_len = 3 * lat
 
     def reset(self):
+
+        if not self.done:
+            raise ValueError('Agent called reset before the environment has done')
+        self.done = False
+
         self.create_new_links_and_senders()
         self.net = Network(self.senders, self.links, throughput_coef=self.throughput_coef, latency_coef=self.latency_coef, loss_coef=self.loss_coef)
 
-        self.steps_taken = 0
+        self.steps_taken  += 1
         self.episodes_run += 1
 
         if self.episodes_run > 0 and self.episodes_run % 100 == 0:
@@ -435,7 +442,7 @@ class SimulatedNetworkEnv(gym.Env, ABC):
 
         self.event_record = {"Events": []}
 
-        self.net.run_for_dur(self.run_dur)
+        self.net.run_for_dur(self.mi_len)
 
         self.reward_ewma *= 0.99
         self.reward_ewma += 0.01 * self.reward_sum
@@ -475,4 +482,9 @@ register(id='PccNs-v15', entry_point='network_sim_2_senders:SimulatedNetworkEnv'
 register(id='PccNs-v16', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
                                                                                           'min_send_rate_factor': 0.5,
                                                                                           'max_send_rate_factor': 0.5,
-                                                                                          'run_dur': 3.0})
+                                                                                          'mi_len': 3.0})
+# Same as PccNs-v13, but with long episodes (800 MIs)
+register(id='PccNs-v17', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                          'min_send_rate_factor': 0.5,
+                                                                                          'max_send_rate_factor': 0.5,
+                                                                                          'episode_len': 800})
