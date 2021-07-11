@@ -22,6 +22,7 @@ from stable_baselines import PPO1
 import os
 import sys
 import inspect
+
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
 sys.path.insert(0,parentdir) 
@@ -36,6 +37,7 @@ print("Architecture is: %s" % str(arch))
 
 training_sess = None
 
+
 class MyMlpPolicy(FeedForwardPolicy):
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False, **_kwargs):
@@ -44,9 +46,10 @@ class MyMlpPolicy(FeedForwardPolicy):
         global training_sess
         training_sess = sess
 
-# env = gym.make('PccNs-v0')
-# env = gym.make('PccNs-v1')
-env = gym.make('PccNs-v2')
+
+env_str = arg_or_default('--env', default='PccNs-v0')
+print("Env is: %s" % env_str)
+env = gym.make(env_str)
 
 gamma = arg_or_default("--gamma", default=0.99)
 print("gamma = %f" % gamma)

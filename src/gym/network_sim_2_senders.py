@@ -12,9 +12,10 @@ import json
 import os
 import sys
 import inspect
+
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
-sys.path.insert(0,parentdir) 
+sys.path.insert(0, parentdir)
 from common import sender_obs, config
 from common.simple_arg_parse import arg_or_default
 from loguru import logger
@@ -59,12 +60,12 @@ class Link:
         self.queue_delay = self.get_cur_queue_delay(event_time)
         self.queue_delay_update_time = event_time
         extra_delay = 1.0 / self.bw
-        #print("Extra delay: %f, Current delay: %f, Max delay: %f" % (extra_delay, self.queue_delay, self.max_queue_delay))
+        # print("Extra delay: %f, Current delay: %f, Max delay: %f" % (extra_delay, self.queue_delay, self.max_queue_delay))
         if extra_delay + self.queue_delay > self.max_queue_delay:
-            #print("\tDrop!")
+            # print("\tDrop!")
             return False
         self.queue_delay += extra_delay
-        #print("\tNew delay = %f" % self.queue_delay)
+        # print("\tNew delay = %f" % self.queue_delay)
         return True
 
     def print_debug(self):
@@ -81,19 +82,24 @@ class Link:
 
 
 class Network:
-    
-    def __init__(self, senders, links):
+
+    def __init__(self, senders, links, throughput_coef: float, latency_coef: float, loss_coef: float):
         self.q = []
         self.cur_time = 0.0
         self.senders = senders
         self.links = links
+
+        self.throughput_coef = throughput_coef
+        self.latency_coef = latency_coef
+        self.loss_coef = loss_coef
+
         self.queue_initial_packets()
 
     def queue_initial_packets(self):
         for sender in self.senders:
             sender.register_network(self)
             sender.reset_obs()
-            heapq.heappush(self.q, (1.0 / sender.rate, sender, EVENT_TYPE_SEND, 0, 0.0, False)) 
+            heapq.heappush(self.q, (1.0 / sender.rate, sender, EVENT_TYPE_SEND, 0, 0.0, False))
 
     def run_for_dur(self, dur):
 
@@ -106,14 +112,14 @@ class Network:
 
             event_time, sender, event_type, next_hop, cur_latency, dropped = heapq.heappop(self.q)
 
-            self.cur_time   = event_time
-            new_event_time  = event_time
-            new_event_type  = event_type
-            new_next_hop    = next_hop
-            new_latency     = cur_latency
-            new_dropped     = dropped
+            self.cur_time = event_time
+            new_event_time = event_time
+            new_event_type = event_type
+            new_next_hop = next_hop
+            new_latency = cur_latency
+            new_dropped = dropped
 
-            push_new_event  = False
+            push_new_event = False
 
             if event_type == EVENT_TYPE_ACK:
                 if next_hop == len(sender.path):
@@ -129,28 +135,29 @@ class Network:
                     push_new_event = True
             if event_type == EVENT_TYPE_SEND:
                 if next_hop == 0:
-                    #print("Packet sent at time %f" % self.cur_time)
+                    # print("Packet sent at time %f" % self.cur_time)
                     sender.on_packet_sent()
                     push_new_event = True
-                    heapq.heappush(self.q, (self.cur_time + (1.0 / sender.rate), sender, EVENT_TYPE_SEND, 0, 0.0, False))
+                    heapq.heappush(self.q,
+                                   (self.cur_time + (1.0 / sender.rate), sender, EVENT_TYPE_SEND, 0, 0.0, False))
                 else:
                     push_new_event = True
 
                 if next_hop == sender.dest:
                     new_event_type = EVENT_TYPE_ACK
                 new_next_hop = next_hop + 1
-                
+
                 link_latency = sender.path[next_hop].get_cur_latency(self.cur_time)
                 new_latency += link_latency
                 new_event_time += link_latency
                 new_dropped = not sender.path[next_hop].packet_enters_link(self.cur_time)
-                   
+
             if push_new_event:
                 heapq.heappush(self.q, (new_event_time, sender, new_event_type, new_next_hop, new_latency, new_dropped))
 
         throughputs = []
-        latencys    = []
-        losses      = []
+        latencys = []
+        losses = []
 
         for sender in self.senders:
             sender_mi = sender.get_run_data()
@@ -158,27 +165,15 @@ class Network:
             latencys.append(sender_mi.get("avg latency"))
             losses.append(sender_mi.get("loss ratio"))
 
-        #reward = 0 if (loss > 0.1 or throughput < bw_cutoff or latency > lat_cutoff or loss > loss_cutoff) else 1 #
-        
-        # Super high throughput
-        #reward = REWARD_SCALE * (20.0 * throughput / RATE_OBS_SCALE - 1e3 * latency / LAT_OBS_SCALE - 2e3 * loss)
-        
-        # Very high thpt
-        reward = (10.0 * sum(throughputs) / (8 * BYTES_PER_PACKET) - 1e3 * sum(latencys) - 2e3 * sum(losses))
-        
-        # High thpt
-        #reward = REWARD_SCALE * (5.0 * throughput / RATE_OBS_SCALE - 1e3 * latency / LAT_OBS_SCALE - 2e3 * loss)
-        
-        # Low latency
-        #reward = REWARD_SCALE * (2.0 * throughput / RATE_OBS_SCALE - 1e3 * latency / LAT_OBS_SCALE - 2e3 * loss)
-
-        #reward = (throughput / RATE_OBS_SCALE) * np.exp(-1 * (LATENCY_PENALTY * latency / LAT_OBS_SCALE + LOSS_PENALTY * loss))
+        reward = self.throughput_coef * sum(throughputs) / (8 * BYTES_PER_PACKET) + \
+                 self.latency_coef * sum(latencys) + \
+                 self.loss_coef * sum(losses)
 
         return reward * REWARD_SCALE
 
 
 class Sender:
-    
+
     def __init__(self, rate, path, dest, features, history_len=10):
 
         self.id = Sender._get_next_id()
@@ -265,10 +260,10 @@ class Sender:
         )
 
     def reset_obs(self):
-        self.sent           = 0
-        self.acked          = 0
-        self.lost           = 0
-        self.rtt_samples    = []
+        self.sent = 0
+        self.acked = 0
+        self.lost = 0
+        self.rtt_samples = []
         self.obs_start_time = self.net.cur_time
 
     def print_debug(self):
@@ -300,6 +295,9 @@ class SimulatedNetworkEnv(gym.Env, ABC):
             latency=None, min_latency=0.05, max_latency=0.5,
             queue=None, min_queue=0, max_queue=8,
             loss=None, min_loss=0.0, max_loss=0.05,
+            min_send_rate_factor=0.3, max_send_rate_factor=1.5,
+            throughput_coef=10.0, latency_coef= -1e3, loss_coef= -2e3,
+            run_dur=None,
             history_len=arg_or_default(
                 "--history-len", default=10
             ),
@@ -325,13 +323,21 @@ class SimulatedNetworkEnv(gym.Env, ABC):
             self.min_loss, self.max_loss = min_loss, max_loss
         else:
             self.min_loss, self.max_loss = loss, loss
+        self.min_send_rate_factor   = min_send_rate_factor
+        self.max_send_rate_factor   = max_send_rate_factor
+        self.throughput_coef        = throughput_coef
 
-        self.reward_sum     = 0.0
-        self.reward_ewma    = 0.0
-        self.episodes_run   = -1
+        self.latency_coef           = latency_coef
+        self.loss_coef              = loss_coef
 
-        self.history_len    = history_len
-        self.features       = features.split(",")
+        self.run_dur                = run_dur
+
+        self.reward_sum = 0.0
+        self.reward_ewma = 0.0
+        self.episodes_run = -1
+
+        self.history_len = history_len
+        self.features = features.split(",")
 
         self.action_space = spaces.Box(np.array([-1e12, -1e12]), np.array([1e12, 1e12]), dtype=np.float32)
 
@@ -349,7 +355,7 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         for i in range(0, 2):
             sender_obs.append(self.senders[i].get_obs())
         sender_obs = np.stack(sender_obs)
-        sender_obs = np.array(sender_obs).reshape(-1,)
+        sender_obs = np.array(sender_obs).reshape(-1, )
 
         return sender_obs
 
@@ -371,16 +377,13 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         for i, sender in enumerate(self.senders):
             sender_mi = sender.get_run_data()
 
-            event[f"Send Rate {i}"]          = sender_mi.get("send rate")
-            event[f"Throughput {i}"]         = sender_mi.get("recv rate")
-            event[f"Latency {i}"]            = sender_mi.get("avg latency")
-            event[f"Loss Rate {i}"]          = sender_mi.get("loss ratio")
-            event[f"Latency Inflation {i}"]  = sender_mi.get("sent latency inflation")
-            event[f"Latency Ratio {i}"]      = sender_mi.get("latency ratio")
-            event[f"Send Ratio {i}"]         = sender_mi.get("send ratio")
-
-            if event[f"Latency {i}"] > 0.0:
-                self.run_dur = 0.5 * sender_mi.get("avg latency")  # TODO: need to check what is this condition (manorz, 03/07/21)
+            event[f"Send Rate {i}"] = sender_mi.get("send rate")
+            event[f"Throughput {i}"] = sender_mi.get("recv rate")
+            event[f"Latency {i}"] = sender_mi.get("avg latency")
+            event[f"Loss Rate {i}"] = sender_mi.get("loss ratio")
+            event[f"Latency Inflation {i}"] = sender_mi.get("sent latency inflation")
+            event[f"Latency Ratio {i}"] = sender_mi.get("latency ratio")
+            event[f"Send Ratio {i}"] = sender_mi.get("send ratio")
 
         self.event_record["Events"].append(event)
 
@@ -399,10 +402,10 @@ class SimulatedNetworkEnv(gym.Env, ABC):
             sender.print_debug()
 
     def create_new_links_and_senders(self):
-        bw    = random.uniform(self.min_bw, self.max_bw)
-        lat   = random.uniform(self.min_lat, self.max_lat)
+        bw = random.uniform(self.min_bw, self.max_bw)
+        lat = random.uniform(self.min_lat, self.max_lat)
         queue = 1 + int(np.exp(random.uniform(self.min_queue, self.max_queue)))
-        loss  = random.uniform(self.min_loss, self.max_loss)
+        loss = random.uniform(self.min_loss, self.max_loss)
 
         logger.info(f'bw={bw}|lat={lat}|queue={queue}|loss={loss}')
 
@@ -411,18 +414,21 @@ class SimulatedNetworkEnv(gym.Env, ABC):
             Link(bw, lat, queue, loss),
         ]
         self.senders = [
-            Sender(random.uniform(0.3, 1.5) * bw, [self.links[0], self.links[1]], 0, self.features, history_len=self.history_len),
-            Sender(random.uniform(0.3, 1.5) * bw, [self.links[0], self.links[1]], 0, self.features, history_len=self.history_len)
+            Sender(random.uniform(self.min_send_rate_factor, self.max_send_rate_factor) * bw,
+                   [self.links[0], self.links[1]], 0, self.features, history_len=self.history_len),
+            Sender(random.uniform(self.min_send_rate_factor, self.max_send_rate_factor) * bw,
+                   [self.links[0], self.links[1]], 0, self.features, history_len=self.history_len)
         ]
 
-        self.run_dur = 3 * lat
+        if self.run_dur is None:
+            self.run_dur = 3 * lat
 
     def reset(self):
         self.create_new_links_and_senders()
-        self.net = Network(self.senders, self.links)
+        self.net = Network(self.senders, self.links, throughput_coef=self.throughput_coef, latency_coef=self.latency_coef, loss_coef=self.loss_coef)
 
-        self.steps_taken    = 0
-        self.episodes_run   += 1
+        self.steps_taken = 0
+        self.episodes_run += 1
 
         if self.episodes_run > 0 and self.episodes_run % 100 == 0:
             self.dump_events_to_file("pcc_env_log_run_%d.json" % self.episodes_run)
@@ -430,11 +436,10 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         self.event_record = {"Events": []}
 
         self.net.run_for_dur(self.run_dur)
-        # self.net.run_for_dur(self.run_dur)
 
         self.reward_ewma *= 0.99
         self.reward_ewma += 0.01 * self.reward_sum
-        print("Reward: %0.2f, Ewma Reward: %0.2f" % (self.reward_sum, self.reward_ewma))
+        logger.info("Reward: %0.2f, Ewma Reward: %0.2f" % (self.reward_sum, self.reward_ewma))
         self.reward_sum = 0.0
 
         return self._get_all_sender_obs()
@@ -445,6 +450,29 @@ class SimulatedNetworkEnv(gym.Env, ABC):
             json.dump(self.event_record, f, indent=4)
 
 
+# Default mode (legacy)
 register(id='PccNs-v10', entry_point='network_sim_2_senders:SimulatedNetworkEnv')
-register(id='PccNs-v11', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0})  # Zero random loss set-up
-register(id='PccNs-v12', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'queue': 8})  # Zero congestive loss set-up (very large queue)
+# Zero random loss set-up
+register(id='PccNs-v11', entry_point='network_sim_2_senders:SimulatedNetworkEnv',
+         kwargs={'loss': 0.0})
+# Zero congestive loss set-up (very large queue)
+register(id='PccNs-v12', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'queue': 8})
+# Starting sending rate always equal to half the link bw
+register(id='PccNs-v13', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'min_send_rate_factor': 0.5,
+                                                                                          'max_send_rate_factor': 0.5})
+# Same as PccNs-v13, but with no random loss at all
+register(id='PccNs-v14', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                          'min_send_rate_factor': 0.5,
+                                                                                          'max_send_rate_factor': 0.5})
+# Same as PccNs-v14, but specifically with low Latency reward.
+register(id='PccNs-v15', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                          'min_send_rate_factor': 0.5,
+                                                                                          'max_send_rate_factor': 0.5,
+                                                                                          'throughput_coef': 2.0,
+                                                                                          'latency_coef': -1e3,
+                                                                                          'loss_coef': -2e3})
+# Same as PccNs-v14, but with long Monitor Intervals of 3[s] (regular mode is 3 * link latency)
+register(id='PccNs-v16', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                          'min_send_rate_factor': 0.5,
+                                                                                          'max_send_rate_factor': 0.5,
+                                                                                          'run_dur': 3.0})
