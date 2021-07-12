@@ -10,7 +10,9 @@ __pycache__/
 .idea
 
 #Results
-t\d
+*.json
+*.out
+
 
 # Distribution / packaging
 .Python
