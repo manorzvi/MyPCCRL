@@ -161,63 +161,63 @@
 mkdir t015-PccNs-v8
 cd t015-PccNs-v8
 echo Run PccN1-v8 1st time
-python ../src/gym/stable_solve.py --env=PccNs-v8 --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve.py --env=PccNs-v8 --model-dir=./ &> out.out &
 cd ../
 mkdir t016-PccNs-v8
 cd t016-PccNs-v8
 echo Run PccN1-v8 2nd time
-python ../src/gym/stable_solve.py --env=PccNs-v8 --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve.py --env=PccNs-v8 --model-dir=./ &> out.out &
 cd ../
 mkdir t017-PccNs-v8
 cd t017-PccNs-v8
 echo Run PccN1-v8 3rd time
-python ../src/gym/stable_solve.py --env=PccNs-v8 --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve.py --env=PccNs-v8 --model-dir=./ &> out.out &
 cd ../
 
 mkdir t115-PccNs-v18
 cd t115-PccNs-v18
 echo Run PccN1-v18 1st time
-python ../src/gym/stable_solve_2_senders.py --env=PccNs-v18  --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve_2_senders.py --env=PccNs-v18  --model-dir=./ &> out.out &
 cd ../
 mkdir t116-PccNs-v18
 cd t116-PccNs-v18
 echo Run PccN1-v18 2nd time
-python ../src/gym/stable_solve_2_senders.py --env=PccNs-v18  --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve_2_senders.py --env=PccNs-v18  --model-dir=./ &> out.out &
 cd ../
 mkdir t117-PccNs-v18
 cd t117-PccNs-v18
 echo Run PccN1-v18 3rd time
-python ../src/gym/stable_solve_2_senders.py --env=PccNs-v18  --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve_2_senders.py --env=PccNs-v18  --model-dir=./ &> out.out &
 cd ../
 
 mkdir t118-PccNs-v19
 cd t118-PccNs-v19
 echo Run PccN1-v19 1st time
-python ../src/gym/stable_solve_2_senders.py --env=PccNs-v19  --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve_2_senders.py --env=PccNs-v19  --model-dir=./ &> out.out &
 cd ../
 mkdir t119-PccNs-v19
 cd t119-PccNs-v19
 echo Run PccN1-v19 2nd time
-python ../src/gym/stable_solve_2_senders.py --env=PccNs-v19  --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve_2_senders.py --env=PccNs-v19  --model-dir=./ &> out.out &
 cd ../
 mkdir t120-PccNs-v19
 cd t120-PccNs-v19
 echo Run PccN1-v19 3rd time
-python ../src/gym/stable_solve_2_senders.py --env=PccNs-v19  --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve_2_senders.py --env=PccNs-v19  --model-dir=./ &> out.out &
 cd ../
 
 mkdir t121-PccNs-v20
 cd t121-PccNs-v20
 echo Run PccN1-v20 1st time
-python ../src/gym/stable_solve_2_senders.py --env=PccNs-v20  --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve_2_senders.py --env=PccNs-v20  --model-dir=./ &> out.out &
 cd ../
 mkdir t122-PccNs-v20
 cd t122-PccNs-v20
 echo Run PccN1-v20 2nd time
-python ../src/gym/stable_solve_2_senders.py --env=PccNs-v20  --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve_2_senders.py --env=PccNs-v20  --model-dir=./ &> out.out &
 cd ../
 mkdir t123-PccNs-v20
 cd t123-PccNs-v20
 echo Run PccN1-v20 3rd time
-python ../src/gym/stable_solve_2_senders.py --env=PccNs-v20  --model-dir=./ &> out.out &
+sudo python ../src/gym/stable_solve_2_senders.py --env=PccNs-v20  --model-dir=./ &> out.out &
 cd ../
