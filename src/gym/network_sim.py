@@ -572,3 +572,8 @@ register(id='PccNs-v7', entry_point='network_sim:SimulatedNetworkEnv', kwargs={'
                                                                                'min_send_rate_factor': 0.5,
                                                                                'max_send_rate_factor': 0.5,
                                                                                'episode_len': 800})
+# Same as PccNs-v1, but specifically with low Latency reward.
+register(id='PccNs-v8', entry_point='network_sim:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                               'throughput_coef': 2.0,
+                                                                               'latency_coef': -1e3,
+                                                                               'loss_coef': -2e3})

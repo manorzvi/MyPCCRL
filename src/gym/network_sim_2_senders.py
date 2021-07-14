@@ -83,7 +83,7 @@ class Link:
 
 class Network:
 
-    def __init__(self, senders, links, throughput_coef: float, latency_coef: float, loss_coef: float):
+    def __init__(self, senders, links, throughput_coef: float, latency_coef: float, loss_coef: float, special_loss):
         self.q = []
         self.cur_time = 0.0
         self.senders = senders
@@ -92,6 +92,7 @@ class Network:
         self.throughput_coef = throughput_coef
         self.latency_coef = latency_coef
         self.loss_coef = loss_coef
+        self.special_loss = special_loss
 
         self.queue_initial_packets()
 
@@ -165,9 +166,16 @@ class Network:
             latencys.append(sender_mi.get("avg latency"))
             losses.append(sender_mi.get("loss ratio"))
 
-        reward = self.throughput_coef * sum(throughputs) / (8 * BYTES_PER_PACKET) + \
-                 self.latency_coef * sum(latencys) + \
-                 self.loss_coef * sum(losses)
+        if self.special_loss is None:
+            reward = self.throughput_coef * sum(throughputs) / (8 * BYTES_PER_PACKET) + \
+                     self.latency_coef * sum(latencys) + \
+                     self.loss_coef * sum(losses)
+        elif self.special_loss == 'fairness1':
+            higher_throughput = throughputs[0] if throughputs[0] > throughputs[1] else throughputs[1]
+            lower_throughput = throughputs[0] if throughputs[0] < throughputs[1] else throughputs[1]
+            reward = self.throughput_coef * (sum(throughputs) - (higher_throughput-lower_throughput)) / (8 * BYTES_PER_PACKET) + \
+                     self.latency_coef * sum(latencys) + \
+                     self.loss_coef * sum(losses)
 
         return reward * REWARD_SCALE
 
@@ -298,6 +306,7 @@ class SimulatedNetworkEnv(gym.Env, ABC):
             min_send_rate_factor=0.3, max_send_rate_factor=1.5,
             throughput_coef=10.0, latency_coef= -1e3, loss_coef= -2e3,
             mi_len=None, episode_len=MAX_STEPS,
+            special_loss=None,
             history_len=arg_or_default(
                 "--history-len", default=10
             ),
@@ -323,12 +332,15 @@ class SimulatedNetworkEnv(gym.Env, ABC):
             self.min_loss, self.max_loss = min_loss, max_loss
         else:
             self.min_loss, self.max_loss = loss, loss
+
         self.min_send_rate_factor   = min_send_rate_factor
         self.max_send_rate_factor   = max_send_rate_factor
-        self.throughput_coef        = throughput_coef
 
+        self.throughput_coef        = throughput_coef
         self.latency_coef           = latency_coef
         self.loss_coef              = loss_coef
+
+        self.special_loss           = special_loss
 
         self.mi_len                 = mi_len
         self.episode_len            = episode_len
@@ -431,7 +443,7 @@ class SimulatedNetworkEnv(gym.Env, ABC):
         self.done = False
 
         self.create_new_links_and_senders()
-        self.net = Network(self.senders, self.links, throughput_coef=self.throughput_coef, latency_coef=self.latency_coef, loss_coef=self.loss_coef)
+        self.net = Network(self.senders, self.links, throughput_coef=self.throughput_coef, latency_coef=self.latency_coef, loss_coef=self.loss_coef, special_loss=self.special_loss)
 
         self.steps_taken   = 0
         self.episodes_run += 1
@@ -486,3 +498,17 @@ register(id='PccNs-v17', entry_point='network_sim_2_senders:SimulatedNetworkEnv'
                                                                                           'min_send_rate_factor': 0.5,
                                                                                           'max_send_rate_factor': 0.5,
                                                                                           'episode_len': 800})
+# Same as PccNs-v11, but specifically with low Latency reward.
+register(id='PccNs-v18', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                          'throughput_coef': 2.0,
+                                                                                          'latency_coef': -1e3,
+                                                                                          'loss_coef': -2e3})
+# Same as PccNs-v11, but with special loss to enforce fairness between agents. The idea is to panelize the reward on the difference between the throughputs.
+register(id='PccNs-v19', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                          'special_loss': 'fairness1'})
+# Same as PccNs-v18, but with special loss to enforce fairness between agents
+register(id='PccNs-v20', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                          'throughput_coef': 2.0,
+                                                                                          'latency_coef': -1e3,
+                                                                                          'loss_coef': -2e3,
+                                                                                          'special_loss': 'fairness1'})
