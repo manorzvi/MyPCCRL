@@ -179,10 +179,15 @@ class Network:
         elif self.special_loss == 'fairness2':
             higher_throughput = throughputs[0] if throughputs[0] > throughputs[1] else throughputs[1]
             lower_throughput = throughputs[0] if throughputs[0] < throughputs[1] else throughputs[1]
-            reward = self.throughput_coef * ((higher_throughput + lower_throughput) /
-                                             (higher_throughput - lower_throughput)) / (8 * BYTES_PER_PACKET) + \
-                     self.latency_coef * sum(latencys) + \
-                     self.loss_coef * sum(losses)
+            if higher_throughput == lower_throughput:
+                reward = self.throughput_coef * (higher_throughput + lower_throughput) / (8 * BYTES_PER_PACKET) + \
+                         self.latency_coef * sum(latencys) + \
+                         self.loss_coef * sum(losses)
+            else:
+                reward = self.throughput_coef * ((higher_throughput + lower_throughput) /
+                                                 (higher_throughput - lower_throughput)) / (8 * BYTES_PER_PACKET) + \
+                         self.latency_coef * sum(latencys) + \
+                         self.loss_coef * sum(losses)
 
         return reward * REWARD_SCALE
 
