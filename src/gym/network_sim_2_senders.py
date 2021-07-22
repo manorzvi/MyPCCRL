@@ -176,6 +176,13 @@ class Network:
             reward = self.throughput_coef * (sum(throughputs) - (higher_throughput-lower_throughput)) / (8 * BYTES_PER_PACKET) + \
                      self.latency_coef * sum(latencys) + \
                      self.loss_coef * sum(losses)
+        elif self.special_loss == 'fairness2':
+            higher_throughput = throughputs[0] if throughputs[0] > throughputs[1] else throughputs[1]
+            lower_throughput = throughputs[0] if throughputs[0] < throughputs[1] else throughputs[1]
+            reward = self.throughput_coef * ((higher_throughput + lower_throughput) /
+                                             (higher_throughput - lower_throughput)) / (8 * BYTES_PER_PACKET) + \
+                     self.latency_coef * sum(latencys) + \
+                     self.loss_coef * sum(losses)
 
         return reward * REWARD_SCALE
 
@@ -512,3 +519,12 @@ register(id='PccNs-v20', entry_point='network_sim_2_senders:SimulatedNetworkEnv'
                                                                                           'latency_coef': -1e3,
                                                                                           'loss_coef': -2e3,
                                                                                           'special_loss': 'fairness1'})
+# Same as PccNs-v19, but with another special loss, designed to keep x-y in scale with x+y
+register(id='PccNs-v21', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                          'special_loss': 'fairness2'})
+# Same as PccNs-v20, but with another special loss, designed to keep x-y in scale with x+y
+register(id='PccNs-v22', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                          'throughput_coef': 2.0,
+                                                                                          'latency_coef': -1e3,
+                                                                                          'loss_coef': -2e3,
+                                                                                          'special_loss': 'fairness2'})
