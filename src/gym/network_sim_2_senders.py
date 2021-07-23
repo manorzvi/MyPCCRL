@@ -483,7 +483,9 @@ class SimulatedNetworkEnv(gym.Env, ABC):
 # Default mode (legacy)
 register(id='PccNs-v10', entry_point='network_sim_2_senders:SimulatedNetworkEnv')
 # Zero random loss set-up
-register(id='PccNs-v11', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0})
+register(id='PccNs-v11',        entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0})
+register(id='PccNs_eval-v11',   entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'mi_len': 10.0})
 # Zero congestive loss set-up (very large queue)
 register(id='PccNs-v12', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'queue': 8})
 # Starting sending rate always equal to half the link bw
@@ -511,25 +513,49 @@ register(id='PccNs-v17', entry_point='network_sim_2_senders:SimulatedNetworkEnv'
                                                                                           'max_send_rate_factor': 0.5,
                                                                                           'episode_len': 800})
 # Same as PccNs-v11, but specifically with low Latency reward.
-register(id='PccNs-v18', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
-                                                                                          'throughput_coef': 2.0,
-                                                                                          'latency_coef': -1e3,
-                                                                                          'loss_coef': -2e3})
+register(id='PccNs-v18',        entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'throughput_coef': 2.0,
+                                                                                                 'latency_coef': -1e3,
+                                                                                                 'loss_coef': -2e3})
+register(id='PccNs_eval-v18',   entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'throughput_coef': 2.0,
+                                                                                                 'latency_coef': -1e3,
+                                                                                                 'loss_coef': -2e3,
+                                                                                                 'mi_len': 10.0})
 # Same as PccNs-v11, but with special loss to enforce fairness between agents. The idea is to panelize the reward on the difference between the throughputs.
-register(id='PccNs-v19', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
-                                                                                          'special_loss': 'fairness1'})
+register(id='PccNs-v19',        entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'special_loss': 'fairness1'})
+register(id='PccNs_eval-v19',   entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'special_loss': 'fairness1',
+                                                                                                 'mi_len': 10.0})
 # Same as PccNs-v18, but with special loss to enforce fairness between agents
-register(id='PccNs-v20', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
-                                                                                          'throughput_coef': 2.0,
-                                                                                          'latency_coef': -1e3,
-                                                                                          'loss_coef': -2e3,
-                                                                                          'special_loss': 'fairness1'})
+register(id='PccNs-v20',        entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'throughput_coef': 2.0,
+                                                                                                 'latency_coef': -1e3,
+                                                                                                 'loss_coef': -2e3,
+                                                                                                 'special_loss': 'fairness1'})
+register(id='PccNs_eval-v20',   entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'throughput_coef': 2.0,
+                                                                                                 'latency_coef': -1e3,
+                                                                                                 'loss_coef': -2e3,
+                                                                                                 'special_loss': 'fairness1',
+                                                                                                 'mi_len': 10.0})
 # Same as PccNs-v19, but with another special loss, designed to keep x-y in scale with x+y
-register(id='PccNs-v21', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
-                                                                                          'special_loss': 'fairness2'})
+register(id='PccNs-v21',        entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'special_loss': 'fairness2'})
+register(id='PccNs_eval-v21',   entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'special_loss': 'fairness2',
+                                                                                                 'mi_len': 10.0})
 # Same as PccNs-v20, but with another special loss, designed to keep x-y in scale with x+y
-register(id='PccNs-v22', entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
-                                                                                          'throughput_coef': 2.0,
-                                                                                          'latency_coef': -1e3,
-                                                                                          'loss_coef': -2e3,
-                                                                                          'special_loss': 'fairness2'})
+register(id='PccNs-v22',        entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'throughput_coef': 2.0,
+                                                                                                 'latency_coef': -1e3,
+                                                                                                 'loss_coef': -2e3,
+                                                                                                 'special_loss': 'fairness2'})
+register(id='PccNs_eval-v22',   entry_point='network_sim_2_senders:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                                 'throughput_coef': 2.0,
+                                                                                                 'latency_coef': -1e3,
+                                                                                                 'loss_coef': -2e3,
+                                                                                                 'special_loss': 'fairness2',
+                                                                                                 'mi_len': 10.0})
+

@@ -545,7 +545,9 @@ class SimulatedNetworkEnv(gym.Env):
 # Regular set-up
 register(id='PccNs-v0', entry_point='network_sim:SimulatedNetworkEnv')
 # Zero random loss set-up
-register(id='PccNs-v1', entry_point='network_sim:SimulatedNetworkEnv', kwargs={'loss': 0.0})
+register(id='PccNs-v1',      entry_point='network_sim:SimulatedNetworkEnv', kwargs={'loss': 0.0})
+register(id='PccNs_eval-v1', entry_point='network_sim:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                    'run_dur': 10.0})
 # Zero congestive loss set-up (very large queue)
 register(id='PccNs-v2', entry_point='network_sim:SimulatedNetworkEnv', kwargs={'queue': 8})
 # Starting sending rate always equal to half the link bw
@@ -573,7 +575,12 @@ register(id='PccNs-v7', entry_point='network_sim:SimulatedNetworkEnv', kwargs={'
                                                                                'max_send_rate_factor': 0.5,
                                                                                'episode_len': 800})
 # Same as PccNs-v1, but specifically with low Latency reward.
-register(id='PccNs-v8', entry_point='network_sim:SimulatedNetworkEnv', kwargs={'loss': 0.0,
-                                                                               'throughput_coef': 2.0,
-                                                                               'latency_coef': -1e3,
-                                                                               'loss_coef': -2e3})
+register(id='PccNs-v8',         entry_point='network_sim:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                       'throughput_coef': 2.0,
+                                                                                       'latency_coef': -1e3,
+                                                                                       'loss_coef': -2e3})
+register(id='PccNs_eval-v8',    entry_point='network_sim:SimulatedNetworkEnv', kwargs={'loss': 0.0,
+                                                                                       'throughput_coef': 2.0,
+                                                                                       'latency_coef': -1e3,
+                                                                                       'loss_coef': -2e3,
+                                                                                       'run_dur': 10.0})
