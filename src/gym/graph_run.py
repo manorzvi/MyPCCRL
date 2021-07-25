@@ -52,7 +52,7 @@ print(
 )
 
 data = {}
-with open(filename) as f:
+with open(filename, 'r') as f:
     data = json.load(f)
 
 time_data = [float(event["Time"]) for event in data["Events"][1:]]
